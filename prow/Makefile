@@ -56,14 +56,33 @@ ARTIFACT-UPLOADER_VERSION ?= $(TAG)
 NEEDS_REBASE_VERSION      ?= $(TAG)
 
 # These are the usual GKE variables.
-PROJECT       ?= k8s-prow
+PROJECT       ?= prombench
 BUILD_PROJECT ?= k8s-prow-builds
 ZONE          ?= us-central1-f
 CLUSTER       ?= prow
+PROMBENCH_VERSION 	?= 2.0.0
 
 # Build and push specific variables.
-REGISTRY ?= gcr.io
+REGISTRY ?= docker.io
 PUSH     ?= docker push
+
+# Prometheus Specific Targets
+hook-build: 
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cmd/hook/hook k8s.io/test-infra/prow/cmd/hook
+
+hook-image:
+	docker build -t "$(REGISTRY)/$(PROJECT)/hook:$(PROMBENCH_VERSION)" cmd/hook
+	$(PUSH) "$(REGISTRY)/$(PROJECT)/hook:$(PROMBENCH_VERSION)"
+
+plank-build: 
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cmd/hook/hook k8s.io/test-infra/prow/cmd/plank
+
+plank-image:
+	docker build -t "$(REGISTRY)/$(PROJECT)/plank:$(PROMBENCH_VERSION)" cmd/plank
+	$(PUSH) "$(REGISTRY)/$(PROJECT)/plank:$(PROMBENCH_VERSION)"
+
+.PHONY: hook-build hook-image plank-build plank-image
+####
 
 DOCKER_LABELS:=--label io.k8s.prow.git-describe="$(shell git describe --tags --always --dirty)"
 
@@ -111,7 +130,7 @@ branchprotector-cronjob: get-cluster-credentials
 
 .PHONY: branchprotector-image branchprotector-cronjob
 
-hook-image: git-image
+hook-build-image: git-image
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cmd/hook/hook k8s.io/test-infra/prow/cmd/hook
 	docker build -t "$(REGISTRY)/$(PROJECT)/hook:$(HOOK_VERSION)" $(DOCKER_LABELS) cmd/hook
 	$(PUSH) "$(REGISTRY)/$(PROJECT)/hook:$(HOOK_VERSION)"
@@ -122,7 +141,7 @@ hook-deployment: get-cluster-credentials
 hook-service: get-cluster-credentials
 	kubectl apply -f cluster/hook_service.yaml
 
-.PHONY: hook-image hook-deployment hook-service
+.PHONY: hook-build-image hook-deployment hook-service
 
 sinker-image: alpine-image
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cmd/sinker/sinker k8s.io/test-infra/prow/cmd/sinker
@@ -180,7 +199,7 @@ horologium-deployment: get-cluster-credentials
 
 .PHONY: horologium-image horologium-deployment
 
-plank-image: alpine-image
+plank-build-image: alpine-image
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cmd/plank/plank k8s.io/test-infra/prow/cmd/plank
 	docker build -t "$(REGISTRY)/$(PROJECT)/plank:$(PLANK_VERSION)" $(DOCKER_LABELS) cmd/plank
 	$(PUSH) "$(REGISTRY)/$(PROJECT)/plank:$(PLANK_VERSION)"
@@ -188,7 +207,7 @@ plank-image: alpine-image
 plank-deployment: get-cluster-credentials
 	kubectl apply -f cluster/plank_deployment.yaml
 
-.PHONY: plank-image plank-deployment
+.PHONY: plank-build-image plank-deployment
 
 jenkins-operator-image: alpine-image
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cmd/jenkins-operator/jenkins-operator k8s.io/test-infra/prow/cmd/jenkins-operator
