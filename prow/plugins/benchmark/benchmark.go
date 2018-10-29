@@ -189,7 +189,12 @@ After successfull deployment, the benchmarking metrics can be viewed at :
 - [prometheus-meta](%s/prometheus-meta) - label **{namespace="prombench-%d"}**
 - [grafana](%s/grafana) - template-variable **"pr-number" : %d**
 
-To stop the benchmark process comment **/benchmark cancel** .`, number, releaseVersion, prombenchURL, number, prombenchURL, number)
+The Prometheus servers being benchmarked can be viewed at :
+- PR - [prombench.prometheus.io/%d/prometheus-pr](%s/%d/prometheus-pr)
+- %s - [prombench.prometheus.io/%d/prometheus-release](%s/%d/prometheus-release)
+
+To stop the benchmark process comment **/benchmark cancel** .`, number, releaseVersion, prombenchURL, number, prombenchURL, number,
+			number, prombenchURL, number, releaseVersion, number, prombenchURL, number)
 
 		c.GitHubClient.CreateComment(org, repo, number, plugins.FormatICResponse(ic.Comment, comment))
 		err := triggerBenchmarkJob(c, ic, startBenchmarkJobName, cancelBenchmarkJobName, releaseVersion, fmt.Sprintf("pr-%d", number))
